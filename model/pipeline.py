@@ -15,7 +15,7 @@ from configs.pipeline_cfg import *
 
 
 def pipeline():
-  env = Env(ENV_MAP, Bot(ENV_VIEW_SIZE, ENV_MAP_SIZE))
+  env = Env(ENV_MAP, (Bot, (ENV_VIEW_SIZE, ENV_MAP_SIZE)))
   memory = ReplayMemory(MEMORY_CAPACITY)
   agent = Agent(env, memory)
 
