@@ -3,18 +3,66 @@ from model.lib.replay_memory import ReplayMemory
 from model.lib.agent import Agent
 from model.lib.dqn import DQN
 from model.env.bots.bot_01 import Bot
+from model.loss import loss_mse
 
 from collections import deque
 import torch.optim as optim
-import torch.nn as nn
 import numpy as np
 import time
+import copy
 
 from configs.torch_cfg import *
 from configs.pipeline_cfg import *
 
 
 def pipeline():
+  net = DQN(DQN_INPUT_SHAPE, DQN_OUTPUT_SHAPE).to(DEVICE)
+  memory = ReplayMemory(MEMORY_CAPACITY)
+
+  pipeline_env_0(10, net, memory)
+
+
+def pipeline_env_0(episodes, net, memory):
+  target_net = copy.deepcopy(net)
+
+  optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
+  env = Env(ENV_MAP, (Bot, (ENV_VIEW_SIZE, ENV_MAP_SIZE)))
+  epsilon = EPSILON_MAX
+
+  for episode in range(episodes):
+    state, done = env.reset(), False
+    while not done:
+      if np.random.random() < epsilon:
+        action = np.random.randint(0, net.output_shape[0])
+      else:
+        state_t = torch.tensor(state).to(DEVICE)
+        prediction = net(state_t)
+        _, act_v = torch.max(prediction, dim=1)
+        action = int(act_v.item())
+
+      next_state, reward, done, _ = env.step(action)
+      memory.push(state, action, reward, done, next_state)
+      state = next_state
+
+      if len(memory) >= MIN_MEMORY_CAPACITY:
+        optimizer.zero_grad()
+        batch = memory.sample(BATCH_SIZE)
+        loss_t = loss_mse(batch, net, target_net, GAMMA)
+        loss_t.backward()
+        optimizer.step()
+
+    if len(memory) >= MIN_MEMORY_CAPACITY:
+      epsilon = np.maximum(epsilon * EPSILON_DECAY, EPSILON_MIN)
+
+    if episode % MERGE_FREQ == 0:
+      target_net.load_state_dict(net.state_dict())
+
+    print(f"Episode: {episode}")
+
+  del env
+
+
+def pipeline_old():
   env = Env(ENV_MAP, (Bot, (ENV_VIEW_SIZE, ENV_MAP_SIZE)))
   memory = ReplayMemory(MEMORY_CAPACITY)
   agent = Agent(env, memory)
@@ -67,25 +115,8 @@ def pipeline():
         best_mean_reward = mean_reward
 
     if len(memory) >= MIN_MEMORY_CAPACITY:
-      def calc_loss(batch, net, target_net):
-        states, actions, rewards, dones, next_states = batch
-
-        states_t = torch.tensor(states).to(DEVICE)
-        actions_t = torch.tensor(actions).to(DEVICE)
-        rewards_t = torch.tensor(rewards).to(DEVICE)
-        next_states_t = torch.tensor(next_states).to(DEVICE)
-        done_mask = torch.tensor(dones).to(DEVICE)
-
-        state_action_values = net(states_t).gather(1, actions_t.unsqueeze(-1)).squeeze(-1)
-        next_state_values = target_net(next_states_t).max(1)[0]
-        next_state_values[done_mask] = 0.0
-        next_state_values = next_state_values.detach()
-
-        expected_state_action_values = next_state_values * GAMMA + rewards_t
-        return nn.MSELoss()(state_action_values.float(), expected_state_action_values.float())
-
       optimizer.zero_grad()
       batch = memory.sample(BATCH_SIZE)
-      loss_t = calc_loss(batch, net, target_net)
+      loss_t = loss_mse(batch, net, target_net, GAMMA)
       loss_t.backward()
       optimizer.step()

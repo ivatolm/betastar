@@ -37,6 +37,9 @@ class Env:
 
 
   def __del__(self):
+    if self.game is not None:
+      self.com.notify()
+      self.game.join()
     del self.com
     self.sm_action.close()
     self.sm_state.close()
