@@ -19,6 +19,13 @@ class ComServer:
     self.buff_done = np.ndarray(sm_done_data['shape'], dtype=sm_done_data['dtype'], buffer=self.sm_done.buf)
 
 
+  def __del__(self):
+    self.sm_action.close()
+    self.sm_state.close()
+    self.sm_reward.close()
+    self.sm_done.close()
+
+
   def send(self, action):
     with self.cv_server:
       self.buff_action[:] = action[:]
@@ -38,11 +45,12 @@ class ComServer:
     return data
 
 
-  def close(self):
-    self.sm_action.close()
-    self.sm_state.close()
-    self.sm_reward.close()
-    self.sm_done.close()
+  def notify(self):
+    with self.cv_client:
+      self.cv_client.notify()
+
+    with self.cv_server:
+      self.cv_server.notify()
 
 
 class ComClient:
@@ -57,6 +65,13 @@ class ComClient:
     self.buff_state = np.ndarray(sm_state_data['shape'], dtype=sm_state_data['dtype'], buffer=self.sm_state.buf)
     self.buff_reward = np.ndarray(sm_reward_data['shape'], dtype=sm_reward_data['dtype'], buffer=self.sm_reward.buf)
     self.buff_done = np.ndarray(sm_done_data['shape'], dtype=sm_done_data['dtype'], buffer=self.sm_done.buf)
+
+
+  def __del__(self):
+    self.sm_action.close()
+    self.sm_state.close()
+    self.sm_reward.close()
+    self.sm_done.close()
 
 
   def send(self, state, reward, done):
@@ -78,8 +93,9 @@ class ComClient:
     return data
 
 
-  def close(self):
-    self.sm_action.close()
-    self.sm_state.close()
-    self.sm_reward.close()
-    self.sm_done.close()
+  def notify(self):
+    with self.cv_client:
+      self.cv_client.notify()
+
+    with self.cv_server:
+      self.cv_server.notify()

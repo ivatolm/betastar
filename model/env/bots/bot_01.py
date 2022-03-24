@@ -43,7 +43,7 @@ class Bot(BotAI):
                            self.generate_done())
 
     self.com.send(state, [reward], [done])
-    self.com.close()
+    del self.com
 
 
   def generate_state(self):

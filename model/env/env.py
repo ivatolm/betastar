@@ -36,6 +36,18 @@ class Env:
     self.game = None
 
 
+  def __del__(self):
+    del self.com
+    self.sm_action.close()
+    self.sm_state.close()
+    self.sm_reward.close()
+    self.sm_done.close()
+    self.sm_action.unlink()
+    self.sm_state.unlink()
+    self.sm_reward.unlink()
+    self.sm_done.unlink()
+
+
   def reset(self):
     def _game_process(self):
       bot_class = self.bot_data[0]
@@ -45,6 +57,13 @@ class Env:
         Bot(Race.Zerg, bot_class(*bot_args)),
         Computer(Race.Protoss, Difficulty.Medium)
       ], realtime=False)
+    
+    if self.game is not None:
+      self.com.notify()
+      self.game.join()
+
+    del self.com
+    self.com = ComServer(*self.com_args)
 
     self.game = Process(target=_game_process, args=(self,))
     self.game.start()
