@@ -1,8 +1,5 @@
 from multiprocessing import shared_memory
 import numpy as np
-import time
-
-from configs.com_cfg import *
 
 
 class ComServer:

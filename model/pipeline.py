@@ -4,6 +4,7 @@ from model.lib.agent import Agent
 from model.lib.dqn import DQN
 from model.env.bots.bot_01 import Bot
 from model.loss import loss_mse
+from model.tools.measurer import Measurer
 
 from collections import deque
 import torch.optim as optim
@@ -19,7 +20,7 @@ def pipeline():
   net = DQN(DQN_INPUT_SHAPE, DQN_OUTPUT_SHAPE).to(DEVICE)
   memory = ReplayMemory(MEMORY_CAPACITY)
 
-  pipeline_env_0(10, net, memory)
+  pipeline_env_0(1000, net, memory)
 
 
 def pipeline_env_0(episodes, net, memory):
@@ -29,16 +30,19 @@ def pipeline_env_0(episodes, net, memory):
   env = Env(ENV_MAP, (Bot, (ENV_VIEW_SIZE, ENV_MAP_SIZE)))
   epsilon = EPSILON_MAX
 
+  measurer = Measurer("env_0")
+
   for episode in range(episodes):
+    print(f"Episode: {episode}")
+    total_reward, total_rewards = 0, []
+
     state, done = env.reset(), False
     while not done:
       if np.random.random() < epsilon:
         action = np.random.randint(0, net.output_shape[0])
       else:
         state_t = torch.tensor(state).to(DEVICE)
-        prediction = net(state_t)
-        _, act_v = torch.max(prediction, dim=1)
-        action = int(act_v.item())
+        action = int(torch.max(net(state_t), dim=1)[1].item())
 
       next_state, reward, done, _ = env.step(action)
       memory.push(state, action, reward, done, next_state)
@@ -51,13 +55,18 @@ def pipeline_env_0(episodes, net, memory):
         loss_t.backward()
         optimizer.step()
 
+      total_reward += reward
+
     if len(memory) >= MIN_MEMORY_CAPACITY:
       epsilon = np.maximum(epsilon * EPSILON_DECAY, EPSILON_MIN)
 
     if episode % MERGE_FREQ == 0:
       target_net.load_state_dict(net.state_dict())
 
-    print(f"Episode: {episode}")
+    total_rewards.append(total_reward)
+
+    measurer.add_value("mean_reward", np.mean(total_rewards), episode)
+    measurer.add_value("epsilon", epsilon, episode)
 
   del env
 

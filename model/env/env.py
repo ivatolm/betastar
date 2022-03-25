@@ -65,8 +65,8 @@ class Env:
       self.com.notify()
       self.game.join()
 
-    del self.com
-    self.com = ComServer(*self.com_args)
+      del self.com
+      self.com = ComServer(*self.com_args)
 
     self.game = Process(target=_game_process, args=(self,))
     self.game.start()
