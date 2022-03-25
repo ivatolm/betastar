@@ -7,6 +7,7 @@ from src.env.bots.bot_01 import Bot
 from src.loss import loss_mse
 from src.tools.measurer import Measurer
 from src.utils import train_cycle
+from src.graphics import Graphics
 
 from collections import deque
 from pathlib import Path
@@ -23,7 +24,7 @@ from configs.pipeline_cfg import *
 from configs.data_cfg import *
 
 
-def pipeline(load_version=None, save_version=VERSION):
+def pipeline(load_version=None, save_version=VERSION, graphics=None):
   if load_version is not None:
     logging.info(f"pipeline: loading network, memory from version {load_version}")
     net = torch.load(SAVES_DIR + '/' + load_version + ".net")
@@ -36,8 +37,11 @@ def pipeline(load_version=None, save_version=VERSION):
 
   logging.info(net)
 
+  if graphics is not None:
+    graphics = Graphics()
+
   logging.info("pipeline: starting to train in 'env_0'")
-  pipeline_env_0(10, net, memory, metrics_version=save_version)
+  pipeline_env_0(10, net, memory, metrics_version=save_version, graphics=graphics)
 
   logging.info("pipeline: training finished")
 
@@ -49,7 +53,7 @@ def pipeline(load_version=None, save_version=VERSION):
     pickle.dump(memory, file)
 
 
-def pipeline_env_0(episodes, net, memory, metrics_version):
+def pipeline_env_0(episodes, net, memory, metrics_version, graphics=None):
   target_net = copy.deepcopy(net)
 
   optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
@@ -65,7 +69,11 @@ def pipeline_env_0(episodes, net, memory, metrics_version):
     agent.reset()
     reward = None
     while reward is None:
-      reward = agent.play_step(net, epsilon)
+      reward, info = agent.play_step(net, epsilon)
+
+      if graphics is not None:
+        graphics.update(*info)
+
       if len(memory) >= MIN_MEMORY_CAPACITY:
         if len(memory) == MIN_MEMORY_CAPACITY:
           logging.info("train: training started")

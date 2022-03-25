@@ -33,4 +33,4 @@ class Agent:
 		if done:
 			done_reward = self.total_reward
 		
-		return done_reward
+		return done_reward, (self.state, action)

@@ -1,8 +1,6 @@
 import logging
 import argparse
 
-from numpy import save
-
 from .pipeline import pipeline
 
 from configs.environ_cfg import *
@@ -15,11 +13,13 @@ def run():
   parser = argparse.ArgumentParser()
   parser.add_argument("--load_version", dest="load_version", help="Load model from this version")
   parser.add_argument("--save_version", dest="save_version", help="Save model to this version")
+  parser.add_argument("--graphics", dest="graphics", help="Visualize environment")
   args = parser.parse_args()
 
   load_version = args.load_version
   save_version = args.save_version
-
+  graphics = args.graphics
+  
   if load_version == "last" or save_version == "last":
     versions = set()
     if Path(SAVES_DIR).exists():
@@ -34,9 +34,11 @@ def run():
       load_version = None
       save_version = None
 
-  pipeline_args = []
+  pipeline_args = {}
   if load_version is not None:
-    pipeline_args.append(load_version)
+    pipeline_args["load_version"] = load_version
   if save_version is not None:
-    pipeline_args.append(save_version)
-  pipeline(*pipeline_args)
+    pipeline_args["save_version"] = save_version
+  if graphics is not None:
+    pipeline_args["graphics"] = graphics
+  pipeline(**pipeline_args)
