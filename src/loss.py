@@ -13,10 +13,16 @@ def loss_mse(batch, net, target_net, gamma):
   next_states_t = torch.tensor(next_states).to(DEVICE)
   done_mask = torch.tensor(dones).to(DEVICE)
 
-  state_action_values = net(states_t).gather(1, actions_t.unsqueeze(-1)).squeeze(-1)
+  state_values = net(states_t).gather(1, actions_t.unsqueeze(-1)).squeeze(-1)
+
+  steps = rewards.shape[1]
+  gammas_t = torch.tensor([gamma ** i for i in range(steps)]).to(DEVICE)
+
+  rewards_sums = (rewards_t * gammas_t).sum(1)
   next_state_values = target_net(next_states_t).max(1)[0]
   next_state_values[done_mask] = 0.0
   next_state_values = next_state_values.detach()
 
-  expected_state_action_values = next_state_values * gamma + rewards_t
-  return nn.MSELoss()(state_action_values.float(), expected_state_action_values.float())
+  expected_state_values = rewards_sums + next_state_values
+
+  return nn.MSELoss()(state_values.float(), expected_state_values.float())

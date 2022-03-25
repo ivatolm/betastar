@@ -70,7 +70,7 @@ def pipeline_env_0(episodes, net, memory, metrics_version):
         if len(memory) == MIN_MEMORY_CAPACITY:
           logging.info("train: training started")
 
-        train_cycle(net, target_net, memory, optimizer, loss_mse, GAMMA, BATCH_SIZE)
+        train_cycle(net, target_net, memory, optimizer, loss_mse, BATCH_SIZE, STEPS, GAMMA)
 
     if len(memory) >= MIN_MEMORY_CAPACITY:
       epsilon = np.maximum(epsilon * EPSILON_DECAY, EPSILON_MIN)
