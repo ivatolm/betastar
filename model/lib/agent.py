@@ -22,17 +22,14 @@ class Agent:
 		if np.random.random() < epsilon:
 			action = np.random.randint(0, net.output_shape[0])
 		else:
-			state_a = np.array([self.state], copy=False)
-			state_t = torch.tensor(state_a).to(DEVICE)
-			prediction = net(state_t)
-			_, act_v = torch.max(prediction, dim=1)
-			action = int(act_v.item())
-		
-		next_state, reward, done, _ = self.env.step(action)
-		self.total_reward += reward
+			state_t = torch.tensor(self.state).to(DEVICE)
+			action = int(torch.max(net(state_t), dim=1)[1].item())
 
+		next_state, reward, done, _ = self.env.step(action)
 		self.memory.push(self.state, action, reward, done, next_state)
 		self.state = next_state
+
+		self.total_reward += reward
 
 		if done:
 			done_reward = self.total_reward

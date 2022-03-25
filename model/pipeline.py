@@ -5,6 +5,7 @@ from model.lib.dqn import DQN
 from model.env.bots.bot_01 import Bot
 from model.loss import loss_mse
 from model.tools.measurer import Measurer
+from model.utils import train_cycle
 
 from collections import deque
 import torch.optim as optim
@@ -30,42 +31,28 @@ def pipeline_env_0(episodes, net, memory):
   env = Env(ENV_MAP, (Bot, (ENV_VIEW_SIZE, ENV_MAP_SIZE)))
   epsilon = EPSILON_MAX
 
+  agent = Agent(env, memory)
   measurer = Measurer("env_0")
 
   for episode in range(episodes):
     print(f"Episode: {episode}")
-    total_reward, total_rewards = 0, []
+    rewards = []
 
-    state, done = env.reset(), False
-    while not done:
-      if np.random.random() < epsilon:
-        action = np.random.randint(0, net.output_shape[0])
-      else:
-        state_t = torch.tensor(state).to(DEVICE)
-        action = int(torch.max(net(state_t), dim=1)[1].item())
-
-      next_state, reward, done, _ = env.step(action)
-      memory.push(state, action, reward, done, next_state)
-      state = next_state
-
-      if len(memory) >= MIN_MEMORY_CAPACITY:
-        optimizer.zero_grad()
-        batch = memory.sample(BATCH_SIZE)
-        loss_t = loss_mse(batch, net, target_net, GAMMA)
-        loss_t.backward()
-        optimizer.step()
-
-      total_reward += reward
+    reward = None
+    while reward is None:
+      reward = agent.play_step(net, epsilon)
 
     if len(memory) >= MIN_MEMORY_CAPACITY:
+      train_cycle(net, target_net, memory, optimizer, loss_mse, GAMMA, BATCH_SIZE)
+
       epsilon = np.maximum(epsilon * EPSILON_DECAY, EPSILON_MIN)
 
     if episode % MERGE_FREQ == 0:
       target_net.load_state_dict(net.state_dict())
 
-    total_rewards.append(total_reward)
+    rewards.append(reward)
 
-    measurer.add_value("mean_reward", np.mean(total_rewards), episode)
+    measurer.add_value("mean_reward", np.mean(rewards), episode)
     measurer.add_value("epsilon", epsilon, episode)
 
   del env
