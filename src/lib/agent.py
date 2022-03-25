@@ -25,7 +25,7 @@ class Agent:
 			action = int(torch.max(net(state_t), dim=1)[1].item())
 
 		next_state, reward, done, _ = self.env.step(action)
-		self.memory.push(self.state, action, reward, done, next_state)
+		self.memory.push(np.copy(self.state), np.copy(action), np.copy(reward), np.copy(done), np.copy(next_state))
 		self.state = next_state
 
 		self.total_reward += reward

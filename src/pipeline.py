@@ -1,36 +1,55 @@
-from model.env.env import Env
-from model.lib.replay_memory import ReplayMemory
-from model.lib.agent import Agent
-from model.lib.dqn import DQN
-from model.env.bots.bot_01 import Bot
-from model.loss import loss_mse
-from model.tools.measurer import Measurer
-from model.utils import train_cycle
+from json import load
+from src.env.env import Env
+from src.lib.replay_memory import ReplayMemory
+from src.lib.agent import Agent
+from src.lib.dqn import DQN
+from src.env.bots.bot_01 import Bot
+from src.loss import loss_mse
+from src.tools.measurer import Measurer
+from src.utils import train_cycle
 
 from collections import deque
+from pathlib import Path
 import torch.optim as optim
 import numpy as np
+import pickle
 import time
 import copy
+import os
 import logging
 
 from configs.torch_cfg import *
 from configs.pipeline_cfg import *
+from configs.data_cfg import *
 
 
-def pipeline():
-  logging.info("pipeline: creating network, memory")
-  net = DQN(DQN_INPUT_SHAPE, DQN_OUTPUT_SHAPE).to(DEVICE)
-  memory = ReplayMemory(MEMORY_CAPACITY)
+def pipeline(load_version=None, save_version=VERSION):
+  if load_version is not None:
+    logging.info(f"pipeline: loading network, memory from version {load_version}")
+    net = torch.load(SAVES_DIR + '/' + load_version + ".net")
+    with open(SAVES_DIR + '/' + load_version + ".mem", "rb") as file:
+      memory = pickle.load(file)
+  else:
+    logging.info("pipeline: creating network, memory")
+    net = DQN(DQN_INPUT_SHAPE, DQN_OUTPUT_SHAPE).to(DEVICE)
+    memory = ReplayMemory(MEMORY_CAPACITY)
+
   logging.info(net)
 
   logging.info("pipeline: starting to train in 'env_0'")
-  pipeline_env_0(10, net, memory)
+  pipeline_env_0(10, net, memory, metrics_version=save_version)
 
   logging.info("pipeline: training finished")
 
+  logging.info(f"pipeline: saving data to version {save_version}")
+  if not Path(SAVES_DIR).exists():
+    os.mkdir(SAVES_DIR)
+  torch.save(net, SAVES_DIR + '/' + save_version + ".net")
+  with open(SAVES_DIR + '/' + save_version + ".mem", "wb") as file:
+    pickle.dump(memory, file)
 
-def pipeline_env_0(episodes, net, memory):
+
+def pipeline_env_0(episodes, net, memory, metrics_version):
   target_net = copy.deepcopy(net)
 
   optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
@@ -38,7 +57,7 @@ def pipeline_env_0(episodes, net, memory):
   epsilon = EPSILON_MAX
 
   agent = Agent(env, memory)
-  measurer = Measurer("env_0")
+  measurer = Measurer("env_0", metrics_version)
 
   for episode in range(episodes):
     rewards = []

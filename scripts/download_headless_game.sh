@@ -1,4 +1,4 @@
-INSALLATION_DIR="data/game"
+INSALLATION_DIR="data/tools/game"
 
 LINK="http://blzdistsc2-a.akamaihd.net/Linux/SC2.4.10.zip"
 ARCHIVE_PASSPHRASE="iagreetotheeula"

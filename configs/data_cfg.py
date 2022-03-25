@@ -2,4 +2,5 @@ from pathlib import Path
 import time
 
 MEASUREMENT_DIR = str(Path().absolute()) + "/data/metrics/"
-START_TIMESTAMP = str(time.time())
+SAVES_DIR = str(Path().absolute()) + "/data/models"
+VERSION = ''.join(str(time.time()).split('.'))
