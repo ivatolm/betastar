@@ -12,16 +12,22 @@ import torch.optim as optim
 import numpy as np
 import time
 import copy
+import logging
 
 from configs.torch_cfg import *
 from configs.pipeline_cfg import *
 
 
 def pipeline():
+  logging.info("pipeline: creating network, memory")
   net = DQN(DQN_INPUT_SHAPE, DQN_OUTPUT_SHAPE).to(DEVICE)
   memory = ReplayMemory(MEMORY_CAPACITY)
+  logging.info(net)
 
-  pipeline_env_0(1000, net, memory)
+  logging.info("pipeline: starting to train in 'env_0'")
+  pipeline_env_0(10, net, memory)
+
+  logging.info("pipeline: training finished")
 
 
 def pipeline_env_0(episodes, net, memory):
@@ -35,23 +41,31 @@ def pipeline_env_0(episodes, net, memory):
   measurer = Measurer("env_0")
 
   for episode in range(episodes):
-    print(f"Episode: {episode}")
     rewards = []
 
+    agent.reset()
     reward = None
     while reward is None:
       reward = agent.play_step(net, epsilon)
+      if len(memory) >= MIN_MEMORY_CAPACITY:
+        if len(memory) == MIN_MEMORY_CAPACITY:
+          logging.info("train: training started")
+
+        train_cycle(net, target_net, memory, optimizer, loss_mse, GAMMA, BATCH_SIZE)
 
     if len(memory) >= MIN_MEMORY_CAPACITY:
-      train_cycle(net, target_net, memory, optimizer, loss_mse, GAMMA, BATCH_SIZE)
-
       epsilon = np.maximum(epsilon * EPSILON_DECAY, EPSILON_MIN)
 
     if episode % MERGE_FREQ == 0:
       target_net.load_state_dict(net.state_dict())
+      logging.info("train: models syncronized")
 
     rewards.append(reward)
 
+    logging.info(f"train: "
+                 f"episode {episode + 1}/{episodes}, "
+                 f"mean reward {round(np.mean(rewards), 3)}, "
+                 f"epsilon {round(epsilon, 3)}")
     measurer.add_value("mean_reward", np.mean(rewards), episode)
     measurer.add_value("epsilon", epsilon, episode)
 

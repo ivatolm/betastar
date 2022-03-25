@@ -8,15 +8,14 @@ class Agent:
 	def __init__(self, env, memory):
 		self.env = env
 		self.memory = memory
-		self._reset()
 
 
-	def _reset(self):
+	def reset(self):
 		self.state = self.env.reset()
 		self.total_reward = 0
 
 
-	def play_step(self, net, epsilon=0):
+	def play_step(self, net, epsilon):
 		done_reward = None
 
 		if np.random.random() < epsilon:
@@ -33,6 +32,5 @@ class Agent:
 
 		if done:
 			done_reward = self.total_reward
-			self._reset()
 		
 		return done_reward

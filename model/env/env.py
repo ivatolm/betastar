@@ -60,7 +60,7 @@ class Env:
         Bot(Race.Zerg, bot_class(*bot_args)),
         Computer(Race.Protoss, Difficulty.Medium)
       ], realtime=False)
-    
+
     if self.game is not None:
       self.com.notify()
       self.game.join()
