@@ -1,4 +1,3 @@
-from json import load
 from src.env.env import Env
 from src.lib.replay_memory import ReplayMemory
 from src.lib.agent import Agent
@@ -41,7 +40,7 @@ def pipeline(load_version=None, save_version=VERSION, graphics=None):
     graphics = Graphics()
 
   logging.info("pipeline: starting to train in 'env_0'")
-  pipeline_env_0(10, net, memory, metrics_version=save_version, graphics=graphics)
+  pipeline_env_0(1000, net, memory, metrics_version=save_version, graphics=graphics)
 
   logging.info("pipeline: training finished")
 
