@@ -17,6 +17,7 @@ import time
 import copy
 import os
 import logging
+import gc
 
 from configs.torch_cfg import *
 from configs.pipeline_cfg import *
@@ -40,7 +41,7 @@ def pipeline(load_version=None, save_version=VERSION, graphics=None):
     graphics = Graphics()
 
   logging.info("pipeline: starting to train in 'env_0'")
-  pipeline_env_0(1000, net, memory, metrics_version=save_version, graphics=graphics)
+  pipeline_env_0(100, net, memory, metrics_version=save_version, graphics=graphics)
 
   logging.info("pipeline: training finished")
 
@@ -62,8 +63,8 @@ def pipeline_env_0(episodes, net, memory, metrics_version, graphics=None):
   agent = Agent(env, memory)
   measurer = Measurer("env_0", metrics_version)
 
+  rewards = deque(maxlen=100)
   for episode in range(episodes):
-    rewards = []
 
     agent.reset()
     reward = None

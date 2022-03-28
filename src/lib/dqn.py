@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+import numpy as np
 
 
 class DQN(nn.Module):
@@ -8,37 +10,33 @@ class DQN(nn.Module):
 		self.input_shape = input_shape
 		self.output_shape = output_shape
 
-		self.f_conv = nn.Sequential(
-			nn.Conv2d(self.input_shape[0], 32, 4),
+		self.conv = nn.Sequential(
+			nn.Conv2d(self.input_shape[0], 32, 8, 4),
 			nn.ReLU(),
-			nn.Conv2d(32, 64, 4),
+			nn.Conv2d(32, 64, 2, 1, 1),
 			nn.ReLU(),
-			nn.Conv2d(64, 128, 4),
-			nn.ReLU(),
-
-			nn.Flatten(),
-			nn.Linear(128 * (input_shape[1] - (4 + 4 + 4) + 3) * (input_shape[2] - (4 + 4 + 4) + 3), 512),
+			nn.Conv2d(64, 64, 3),
 			nn.ReLU(),
 		)
 
-		self.f_hidden = nn.Sequential(
-			nn.Linear(512, 512),
-			nn.ReLU(),
-			nn.Linear(512, 32),
-			nn.ReLU(),
-		)
-
+		conv_out_size = self._get_conv_out(input_shape)
 		self.f_actions = nn.Sequential(
-			nn.Linear(32, output_shape[0])
+				nn.Flatten(),
+				nn.Linear(conv_out_size, 512),
+				nn.ReLU(),
+				nn.Linear(512, output_shape[0])
 		)
+
+
+	def _get_conv_out(self, shape):
+		o = self.conv(torch.zeros(1, *shape))
+		return int(np.prod(o.size()))
+
 
 	def forward(self, x):
 		x = x.float()
 		x = x.view(-1, self.input_shape[0], self.input_shape[1], self.input_shape[2])
 
-		conv = self.f_conv(x)
-		hidden = self.f_hidden(conv)
-		
-		actions = self.f_actions(hidden)
+		actions = self.f_actions(self.conv(x))
 
 		return actions

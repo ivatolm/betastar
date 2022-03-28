@@ -19,10 +19,13 @@ class Agent:
 		done_reward = None
 
 		if np.random.random() < epsilon:
+			q = None
 			action = np.random.randint(0, net.output_shape[0])
 		else:
 			state_t = torch.tensor(self.state).to(DEVICE)
-			action = int(torch.max(net(state_t), dim=1)[1].item())
+			pred = net(state_t)
+			q = int(torch.max(pred, dim=1)[0].item())
+			action = int(torch.max(pred, dim=1)[1].item())
 
 		next_state, reward, done, _ = self.env.step(action)
 		self.memory.push(np.copy(self.state), np.copy(action), np.copy(reward), np.copy(done), np.copy(next_state))
@@ -33,4 +36,4 @@ class Agent:
 		if done:
 			done_reward = self.total_reward
 		
-		return done_reward, (self.state, action)
+		return done_reward, (self.state, action, q)
