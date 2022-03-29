@@ -1,18 +1,24 @@
 import pygame
 import colorsys
 import random
+import math
 
 from configs.graphics_cfg import *
-from configs.pipeline_cfg import *
 
 
 class Graphics:
   def __init__(self):
     pygame.init()
-    self.screen = pygame.display.set_mode(DISPLAY_SIZE)
-    self.font = pygame.font.SysFont('Iosevka', FONT_SIZE)
-    self.colors = {}
+    self.font = pygame.font.SysFont(FONT_NAME, FONT_SIZE)
     self.prev_q = None
+    self.colors = {}
+
+    self.layout = None
+    self.views_size = None
+    self.statusbar_size = None
+    self.display_size = None
+
+    self.screen = None
 
 
   def render_view(self, position, view):
@@ -34,16 +40,30 @@ class Graphics:
 
   def render_status_bar(self, q):
     text = self.font.render(f"Estimated Q: {q}", True, FONT_COLOR)
-    self.screen.blit(text, (0, VIEWS_SIZE[1]))
+    self.screen.blit(text, (0, self.views_size[1]))
 
 
   def update(self, state, action, q):
+    if self.screen is None:
+      channels_num = state.shape[0]
+      view_size = state[0].shape
+      self.layout = (math.ceil(channels_num / VIEWS_IN_ROW),
+                     min(VIEWS_IN_ROW, channels_num))
+      self.views_size = (self.layout[1] * (view_size[0] * CELL_SIZE) + (self.layout[1] - 1) * OFFSET_SIZE,
+                         self.layout[0] * (view_size[1] * CELL_SIZE) + (self.layout[0] - 1) * OFFSET_SIZE)
+      self.statusbar_size = (self.views_size[0],
+                             STATUSBAR_HEIGHT)
+      self.display_size = (max(self.views_size[0], self.statusbar_size[0]),
+                           self.views_size[1] + self.statusbar_size[1])
+      self.screen = pygame.display.set_mode(self.display_size)
+
     self.screen.fill(BACKGROUND_COLOR)
 
     for i, view in enumerate(state):
+      shape = view.shape
       position = (
-        (i % VIEWS_IN_ROW) * (OFFSET_SIZE + CELL_SIZE * ENV_VIEW_SIZE[0]),
-        (i // VIEWS_IN_ROW) * (OFFSET_SIZE + CELL_SIZE * ENV_VIEW_SIZE[1])
+        (i % VIEWS_IN_ROW) * (OFFSET_SIZE + CELL_SIZE * shape[0]),
+        (i // VIEWS_IN_ROW) * (OFFSET_SIZE + CELL_SIZE * shape[1])
       )
       self.render_view(position, view)
 
@@ -52,7 +72,6 @@ class Graphics:
 
     if self.prev_q is not None:
       self.render_status_bar(self.prev_q)
-
 
     pygame.display.update()
 

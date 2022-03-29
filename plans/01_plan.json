@@ -1,0 +1,42 @@
+{
+  "BASE": {
+    "env_view_size": [24, 24],
+    "env_map_size": [48, 48],
+    
+    "channels_num": 4,
+    "dqn_input_shape": [4, 24, 24],
+    "dqn_output_shape": [10],
+    "memory_capacity": 25000,
+
+    "env_action_shape": [1],
+    "env_state_shape": [4, 24, 24],
+    "env_reward_shape": [1],
+    "env_done_shape": [1]
+  },
+  "env_0": {
+    "episodes_num": 50,
+    "env_map": "BuildMarines",
+    "learning_rate": 1e-2,
+    "merge_freq": 5,
+    "batch_size": 32,
+    "steps": 50,
+    "gamma": 0.99,
+    "min_memory_capacity": 100,
+    "epsilon_max": 1.0,
+    "epsilon_min": 0.5,
+    "epsilon_decay": 0.99
+  },
+  "env_1": {
+    "episodes_num": 50,
+    "env_map": "BuildMarines",
+    "learning_rate": 1e-3,
+    "merge_freq": 5,
+    "batch_size": 32,
+    "steps": 50,
+    "gamma": 0.99,
+    "min_memory_capacity": 100,
+    "epsilon_max": 0.5,
+    "epsilon_min": 0.3,
+    "epsilon_decay": 0.99
+  }
+}

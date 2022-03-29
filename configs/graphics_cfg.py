@@ -1,8 +1,4 @@
-import math
-
-from configs.pipeline_cfg import *
-
-
+FONT_NAME = "Iosevka"
 FONT_SIZE = 16
 BACKGROUND_COLOR = (0, 0, 0)
 FONT_COLOR = (255, 255, 255)
@@ -11,13 +7,4 @@ OFFSET_SIZE = 2
 CELL_SIZE = 8
 VIEWS_IN_ROW = 3
 
-LAYOUT = (math.ceil(CHANNELS_NUM / VIEWS_IN_ROW),
-          min(VIEWS_IN_ROW, CHANNELS_NUM))
-
-VIEWS_SIZE = (LAYOUT[1] * (ENV_VIEW_SIZE[0] * CELL_SIZE) + (LAYOUT[1] - 1) * OFFSET_SIZE,
-              LAYOUT[0] * (ENV_VIEW_SIZE[1] * CELL_SIZE) + (LAYOUT[0] - 1) * OFFSET_SIZE)
-
-STATUSBAR_SIZE = (VIEWS_SIZE[0], 20)
-
-DISPLAY_SIZE = (max(VIEWS_SIZE[0], STATUSBAR_SIZE[0]),
-                VIEWS_SIZE[1] + STATUSBAR_SIZE[1])
+STATUSBAR_HEIGHT = 20

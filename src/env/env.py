@@ -10,27 +10,26 @@ import numpy as np
 
 from .com import ComServer
 
-from configs.pipeline_cfg import *
-
 
 class Env:
-  def __init__(self, map_name, bot_data):
+  def __init__(self, base_plan, map_name, bot_data):
+    self.base_plan = base_plan
     self.map_name = map_name
     self.bot_data = bot_data
 
     self.cv_server = Condition()
     self.cv_client = Condition()
-    self.sm_action = shared_memory.SharedMemory(create=True, size=np.zeros(shape=ENV_ACTION_SHAPE, dtype=np.float64).nbytes)
-    self.sm_state = shared_memory.SharedMemory(create=True, size=np.zeros(shape=ENV_STATE_SHAPE, dtype=np.float64).nbytes)
-    self.sm_reward = shared_memory.SharedMemory(create=True, size=np.zeros(shape=ENV_REWARD_SHAPE, dtype=np.float64).nbytes)
-    self.sm_done = shared_memory.SharedMemory(create=True, size=np.zeros(shape=ENV_DONE_SHAPE, dtype=np.bool8).nbytes)
+    self.sm_action = shared_memory.SharedMemory(create=True, size=np.zeros(shape=self.base_plan["env_action_shape"], dtype=np.float64).nbytes)
+    self.sm_state = shared_memory.SharedMemory(create=True, size=np.zeros(shape=self.base_plan["env_state_shape"], dtype=np.float64).nbytes)
+    self.sm_reward = shared_memory.SharedMemory(create=True, size=np.zeros(shape=self.base_plan["env_reward_shape"], dtype=np.float64).nbytes)
+    self.sm_done = shared_memory.SharedMemory(create=True, size=np.zeros(shape=self.base_plan["env_done_shape"], dtype=np.bool8).nbytes)
 
     self.com_args = (self.cv_server,
                      self.cv_client,
-                     {"shape": ENV_ACTION_SHAPE, "dtype": np.float64, "name": self.sm_action.name},
-                     {"shape": ENV_STATE_SHAPE, "dtype": np.float64, "name": self.sm_state.name},
-                     {"shape": ENV_REWARD_SHAPE, "dtype": np.float64, "name": self.sm_reward.name},
-                     {"shape": ENV_DONE_SHAPE, "dtype": np.bool8, "name": self.sm_done.name})
+                     {"shape": self.base_plan["env_action_shape"], "dtype": np.float64, "name": self.sm_action.name},
+                     {"shape": self.base_plan["env_state_shape"], "dtype": np.float64, "name": self.sm_state.name},
+                     {"shape": self.base_plan["env_reward_shape"], "dtype": np.float64, "name": self.sm_reward.name},
+                     {"shape": self.base_plan["env_done_shape"], "dtype": np.bool8, "name": self.sm_done.name})
     self.com = ComServer(*self.com_args)
 
     self.game = None
@@ -71,7 +70,7 @@ class Env:
     self.game = Process(target=_game_process, args=(self,))
     self.game.start()
 
-    return np.zeros(shape=ENV_STATE_SHAPE, dtype=np.float64)
+    return np.zeros(shape=self.base_plan["env_state_shape"], dtype=np.float64)
 
 
   def step(self, action):
