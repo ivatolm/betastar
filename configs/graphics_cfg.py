@@ -1,4 +1,4 @@
-FONT_NAME = "Iosevka"
+FONT_NAME = "data/static/fonts/roboto_mono/static/RobotoMono-Regular.ttf"
 FONT_SIZE = 16
 BACKGROUND_COLOR = (0, 0, 0)
 FONT_COLOR = (255, 255, 255)
