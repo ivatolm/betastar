@@ -3,6 +3,8 @@ def train_cycle(net, target_net, memory, optimizer, loss_func, batch_size, steps
   batch = memory.sample(batch_size, steps)
   loss_t = loss_func(batch, net, target_net, gamma)
   loss_t.backward()
+  for param in net.parameters():
+    param.grad.data.clamp_(-1, 1)
   optimizer.step()
   return loss_t
 

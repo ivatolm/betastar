@@ -3,7 +3,7 @@ from src.lib.replay_memory import ReplayMemory
 from src.lib.agent import Agent
 from src.lib.dqn import DQN
 from src.env.bots.bot_01 import Bot
-from src.loss import loss_mse
+from src.loss import loss_huber
 from src.tools.measurer import Measurer
 from src.utils import train_cycle, gen_plan_str
 from src.graphics import Graphics
@@ -73,7 +73,7 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
     for k, v in state.items():
         if isinstance(v, torch.Tensor):
             state[k] = v.cuda()
-  env = Env(base_plan, env_plan["env_map"], (Bot, (base_plan["env_view_size"], base_plan["env_map_size"])))
+  env = Env(base_plan, env_plan, (Bot, (base_plan["env_view_size"], base_plan["env_map_size"])))
   epsilon = env_plan["epsilon_max"]
 
   agent = Agent(env, memory)
@@ -94,7 +94,7 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
         if len(memory) == env_plan["min_memory_capacity"]:
           logging.info("train: training started")
 
-        loss = train_cycle(net, target_net, memory, optimizer, loss_mse, env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
+        loss = train_cycle(net, target_net, memory, optimizer, loss_huber, env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
 
     if len(memory) >= env_plan["min_memory_capacity"]:
       epsilon = np.maximum(epsilon * env_plan["epsilon_decay"], env_plan["epsilon_min"])

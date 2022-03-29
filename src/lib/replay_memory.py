@@ -2,7 +2,6 @@ import numpy as np
 from collections import deque
 
 
-
 class ReplayMemory:
 	def __init__(self, capacity):
 		self.buffer = deque(maxlen=capacity)

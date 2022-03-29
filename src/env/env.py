@@ -1,20 +1,25 @@
 from sc2 import maps
 from sc2.player import Bot, Computer
-from sc2.main import run_game
+from sc2.main import run_multiple_games, a_run_multiple_games_nokill, GameMatch, Map
 from sc2.data import Race, Difficulty
 import warnings
 warnings.filterwarnings('ignore')
 
 from multiprocessing import Process, shared_memory, Condition
 import numpy as np
+import asyncio
 
 from .com import ComServer
 
 
+def run_multiple_games_no_kill(matches):
+  return asyncio.get_event_loop().run_until_complete(a_run_multiple_games_nokill(matches))
+
+
 class Env:
-  def __init__(self, base_plan, map_name, bot_data):
+  def __init__(self, base_plan, env_plan, bot_data):
     self.base_plan = base_plan
-    self.map_name = map_name
+    self.env_plan = env_plan
     self.bot_data = bot_data
 
     self.cv_server = Condition()
@@ -30,15 +35,21 @@ class Env:
                      {"shape": self.base_plan["env_state_shape"], "dtype": np.float64, "name": self.sm_state.name},
                      {"shape": self.base_plan["env_reward_shape"], "dtype": np.float64, "name": self.sm_reward.name},
                      {"shape": self.base_plan["env_done_shape"], "dtype": np.bool8, "name": self.sm_done.name})
-    self.com = ComServer(*self.com_args)
+    self.com = None
 
-    self.game = None
+    matches = []
+    for _ in range(env_plan["episodes_num"]):
+      matches.append(GameMatch(maps.get(env_plan["env_map"]),
+                               [Bot(Race.Terran, self.bot_data[0](self.bot_data[1], self.com_args)),
+                                Computer(Race.Protoss, Difficulty.Medium)]))
+
+    self.game_runner = Process(target=run_multiple_games_no_kill, args=(matches,))
+    self.game_runner.start()
 
 
   def __del__(self):
-    if self.game is not None:
-      self.com.notify()
-      self.game.join()
+    self.com.notify()
+    self.game_runner.join()
     del self.com
     self.sm_action.close()
     self.sm_state.close()
@@ -51,24 +62,8 @@ class Env:
 
 
   def reset(self):
-    def _game_process(self):
-      bot_class = self.bot_data[0]
-      ai_args = self.bot_data[1]
-      bot_args = (ai_args, self.com_args)
-      run_game(maps.get(self.map_name), [
-        Bot(Race.Zerg, bot_class(*bot_args)),
-        Computer(Race.Protoss, Difficulty.Medium)
-      ], realtime=False)
-
-    if self.game is not None:
-      self.com.notify()
-      self.game.join()
-
-      del self.com
-      self.com = ComServer(*self.com_args)
-
-    self.game = Process(target=_game_process, args=(self,))
-    self.game.start()
+    del self.com
+    self.com = ComServer(*self.com_args)
 
     return np.zeros(shape=self.base_plan["env_state_shape"], dtype=np.float64)
 

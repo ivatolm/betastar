@@ -37,6 +37,9 @@ def run():
       logging.error(f"run: plan file {plan_path} doesn't exist")
     if load_status == False:
       exit()
+  else:
+    logging.error(f"run: plan is not specified")
+    exit()
 
   if load_version == "last" or save_version == "last":
     versions = set()
