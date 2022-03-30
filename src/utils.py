@@ -6,7 +6,7 @@ def train_cycle(net, target_net, memory, optimizer, loss_func, batch_size, steps
   for param in net.parameters():
     param.grad.data.clamp_(-1, 1)
   optimizer.step()
-  return loss_t
+  return loss_t.item()
 
 
 def gen_plan_str(plan_name, plan):

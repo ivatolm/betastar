@@ -79,15 +79,16 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
   agent = Agent(env, memory)
   measurer = Measurer(env_plan["env_map"], metrics_version)
 
+  graphics_cntr = 0
+  frame_times, episode_timer, episode_time = [], time.time(), 0
   rewards = deque(maxlen=100)
   for episode in range(env_plan["episodes_num"]):
-    loss = None
     agent.reset()
-    reward = None
+    loss, reward, frame_timer = None, None, time.time()
     while reward is None:
       reward, info = agent.play_step(net, epsilon)
 
-      if graphics is not None:
+      if graphics is not None and graphics_cntr % 10 == 0:
         graphics.update(*info)
 
       if len(memory) >= env_plan["min_memory_capacity"]:
@@ -95,6 +96,12 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
           logging.info("train: training started")
 
         loss = train_cycle(net, target_net, memory, optimizer, loss_huber, env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
+      
+      graphics_cntr += 1
+
+      now = time.time()
+      frame_times.append(now - frame_timer)
+      frame_timer = now
 
     if len(memory) >= env_plan["min_memory_capacity"]:
       epsilon = np.maximum(epsilon * env_plan["epsilon_decay"], env_plan["epsilon_min"])
@@ -105,13 +112,24 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
 
     rewards.append(reward)
 
+    now = time.time()
+    episode_time = now - episode_timer
+    episode_timer = now
+
     logging.info(f"train: "
                  f"episode {episode + 1}/{env_plan['episodes_num']}, "
+                 f"reward {round(reward, 3)}, "
                  f"mean reward {round(np.mean(rewards), 3)}, "
-                 f"epsilon {round(epsilon, 3)}")
+                 f"epsilon {round(epsilon, 3)}, "
+                 f"loss {round(loss, 3)}, "
+                 f"mean frame time {round(np.mean(frame_times), 3)}, "
+                 f"episode time {round(episode_time, 3)}")
+    measurer.add_value("reward", reward, episode)
     measurer.add_value("mean_reward", np.mean(rewards), episode)
     measurer.add_value("epsilon", epsilon, episode)
-    logging.info(loss)
+    measurer.add_value("loss", loss, episode)
+    measurer.add_value("mean_frame_time", np.mean(frame_times), episode)
+    measurer.add_value("episode_time", episode_time, episode)
 
   del env
 
