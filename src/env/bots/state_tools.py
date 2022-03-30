@@ -7,6 +7,11 @@ def to_screen_pos(cam, position):
           position[1] - cam[0][1])
 
 
+def to_abs_pos(cam, position):
+  return (position[0] + cam[0][0],
+          position[1] + cam[0][1])
+
+
 def get_seeable_parts(cam, position, size):
   seeable = []
   for y in range(size):

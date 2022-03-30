@@ -69,6 +69,6 @@ class Env:
 
 
   def step(self, action):
-    self.com.send([action])
+    self.com.send(action)
     self.state, self.reward, self.done = self.com.get()
     return self.state, self.reward[0], self.done[0], ""

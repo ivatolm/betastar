@@ -2,7 +2,7 @@ from sc2.bot_ai import BotAI
 from sc2.ids.unit_typeid import UnitTypeId
 from sc2.position import Point2
 
-from .state_tools import get_uid
+from .state_tools import get_uid, to_screen_pos, to_int_pos, to_abs_pos
 
 from ..com import ComClient
 from .state_pipeline import pipeline as gen_state
@@ -23,7 +23,8 @@ class Bot(BotAI):
 
 
   async def on_step(self, iteration):
-    action = self.com.get()[0]
+    action = self.com.get()
+    action = tuple(map(int, action))
 
     await self.do_action(action)
     state, reward, done = (self.generate_state(),
@@ -36,7 +37,7 @@ class Bot(BotAI):
 
   async def on_end(self, result):
     self.done_ = True
-    _ = self.com.get()[0]
+    _ = self.com.get()
     state, reward, done = (self.generate_state(),
                            self.generate_reward(),
                            self.generate_done())
@@ -69,55 +70,53 @@ class Bot(BotAI):
 
 
   async def do_action(self, action):
+    cmd, args = action[0], action[1:]
+
     await self.distribute_workers()
-    match action:
-      case 0:
+    match cmd:
+      case 0: # no_op
         pass
 
-      case 1:
-        self.cam[0][0] = min(self.cam[0][0] + 1, self.map_size[0] - self.cam[2][0] - 1)
-        self.cam[1][0] = self.cam[0][0] + self.cam[2][0]
+      # case 1: # move_cam
+      #   x, y = args[:2]
 
-      case 2:
-        self.cam[0][0] = max(self.cam[0][0] - 1, 0)
-        self.cam[1][0] = self.cam[0][0] + self.cam[2][0]
+      #   self.cam[0] = [self.cam[0][0] + x - self.cam[2][0] // 2, self.cam[0][1] + y - self.cam[2][1] // 2]
+      #   self.cam[0] = [max(min(self.cam[0][0], self.map_size[0] - self.cam[2][0] - 1), 0),
+      #                  max(min(self.cam[0][1], self.map_size[1] - self.cam[2][1] - 1), 0)]
 
-      case 3:
-        self.cam[0][1] = min(self.cam[0][1] + 1, self.map_size[1] - self.cam[2][1] - 1)
-        self.cam[1][1] = self.cam[0][1] + self.cam[2][1]
+      #   self.cam[1] = [self.cam[0][0] + self.cam[2][0], self.cam[0][1] + self.cam[2][1]]
 
-      case 4:
-        self.cam[0][1] = max(self.cam[0][1] - 1, 0)
-        self.cam[1][1] = self.cam[0][1] + self.cam[2][1]
+      case 1: # select_rect
+        x1, y1, x2, y2 = args
+        if not (x1 < x2 and y1 < y2):
+          return
 
-      case 5:
-        pointer_position = (self.cam[0][0] + self.cam[2][0] // 2,
-                            self.cam[0][1] + self.cam[2][1] // 2)
-        self.selected_ = [self.all_units.closest_to(Point2(pointer_position))]
+        self.selected_ = []
+        for unit in self.all_units:
+          pos = to_int_pos(unit.position)
+          screen_pos = to_screen_pos(self.cam, pos)
+          if (x1 <= screen_pos[0] < x2) and (y1 <= screen_pos[1] < y2):
+            self.selected_.append(unit)
 
-      case 7:
-        if len(self.selected_) > 0:
-          selected_unit = self.selected_[0]
-          pointer_position = (self.cam[0][0] + self.cam[2][0] // 2,
-                              self.cam[0][1] + self.cam[2][1] // 2)
-          if get_uid(selected_unit) == UnitTypeId.SCV:
+      case 2: # build_supply
+        x, y = args[:2]
+
+        for unit in self.selected_:
+          if get_uid(unit) == UnitTypeId.SCV:
             if self.can_afford(UnitTypeId.SUPPLYDEPOT):
-              selected_unit.build(UnitTypeId.SUPPLYDEPOT, position=Point2(pointer_position))
+              unit.build(UnitTypeId.SUPPLYDEPOT, position=Point2(to_abs_pos(self.cam, (x, y))))
 
-      case 8:
-        if len(self.selected_) > 0:
-          selected_unit = self.selected_[0]
-          pointer_position = (self.cam[0][0] + self.cam[2][0] // 2,
-                              self.cam[0][1] + self.cam[2][1] // 2)
-          if get_uid(selected_unit) == UnitTypeId.SCV:
+      case 3: # build_barrack
+        x, y = args[:2]
+
+        for unit in self.selected_:
+          if get_uid(unit) == UnitTypeId.SCV:
             if self.can_afford(UnitTypeId.BARRACKS):
-              selected_unit.build(UnitTypeId.BARRACKS, position=Point2(pointer_position))
-
-      case 9:
-        if len(self.selected_) > 0:
-          selected_unit = self.selected_[0]
-          pointer_position = (self.cam[0][0] + self.cam[2][0] // 2,
-                              self.cam[0][1] + self.cam[2][1] // 2)
-          if selected_unit.type_id == UnitTypeId.BARRACKS:
+              unit.build(UnitTypeId.BARRACKS, position=Point2(to_abs_pos(self.cam, (x, y))))
+      
+      case 4: # train_marine
+        for unit in self.selected_:
+          if get_uid(unit) == UnitTypeId.BARRACKS:
             if self.can_afford(UnitTypeId.MARINE):
-              selected_unit.train(UnitTypeId.MARINE)
+              unit.train(UnitTypeId.MARINE)
+

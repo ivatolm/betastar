@@ -3,7 +3,6 @@ from src.lib.replay_memory import ReplayMemory
 from src.lib.agent import Agent
 from src.lib.dqn import DQN
 from src.env.bots.bot_01 import Bot
-from src.loss import loss_huber
 from src.tools.measurer import Measurer
 from src.utils import train_cycle, gen_plan_str
 from src.graphics import Graphics
@@ -33,7 +32,7 @@ def train_pipeline(plan, load_version=None, save_version=VERSION, graphics=None)
       optimizer_state = pickle.load(file)
   else:
     logging.info("train_pipeline: creating network, memory")
-    net = DQN(base_plan["dqn_input_shape"], base_plan["dqn_output_shape"]).to(DEVICE)
+    net = DQN(base_plan["dqn_input_shape"], base_plan["dqn_output_shapes"]).to(DEVICE)
     memory = ReplayMemory(base_plan["memory_capacity"])
     optimizer_state = optim.Adam(net.parameters()).state_dict()
 
@@ -95,7 +94,7 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
         if len(memory) == env_plan["min_memory_capacity"]:
           logging.info("train: training started")
 
-        loss = train_cycle(net, target_net, memory, optimizer, loss_huber, env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
+        loss = train_cycle(net, target_net, memory, optimizer, "huber", env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
       
       graphics_cntr += 1
 
