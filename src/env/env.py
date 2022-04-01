@@ -62,7 +62,13 @@ class Env:
 
 
   def reset(self):
-    del self.com
+    if self.com is not None:
+      self.com.notify()
+      del self.com
+      self.sm_action.unlink()
+      self.sm_state.unlink()
+      self.sm_reward.unlink()
+      self.sm_done.unlink()
     self.com = ComServer(*self.com_args)
 
     return np.zeros(shape=self.base_plan["env_state_shape"], dtype=np.float64)

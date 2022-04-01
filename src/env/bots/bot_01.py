@@ -13,13 +13,18 @@ import copy
 class Bot(BotAI):
   def __init__(self, ai_args, com_args):
     self.view_size, self.map_size = ai_args
-    self.com = ComClient(*com_args)
+    self.com, self.com_args = None, com_args
 
-    self.cam = [[0, 0], [self.view_size[0], self.view_size[1]], [self.view_size[0] - 0, self.view_size[1] - 0]]
+    self.cam = [[20, 20], [self.view_size[0] + 20, self.view_size[1] + 20], [self.view_size[0], self.view_size[1]]]
+
     self.selected_ = []
 
     self.state_, self.reward_, self.done_ = None, 1, False
     self.prev_self = None
+
+
+  async def on_start(self):
+    self.com = ComClient(*self.com_args)
 
 
   async def on_step(self, iteration):
@@ -101,6 +106,9 @@ class Bot(BotAI):
       case 2: # build_supply
         x, y = args[:2]
 
+        if len(self.all_own_units(UnitTypeId.SUPPLYDEPOT)) > 0:
+          return
+
         for unit in self.selected_:
           if get_uid(unit) == UnitTypeId.SCV:
             if self.can_afford(UnitTypeId.SUPPLYDEPOT):
@@ -108,6 +116,9 @@ class Bot(BotAI):
 
       case 3: # build_barrack
         x, y = args[:2]
+
+        if len(self.all_own_units(UnitTypeId.BARRACKS)) > 0:
+          return
 
         for unit in self.selected_:
           if get_uid(unit) == UnitTypeId.SCV:

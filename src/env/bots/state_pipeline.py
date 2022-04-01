@@ -13,7 +13,7 @@ def pipeline(bot_data, map_size, cam):
     gen_unit_type_view(bot_data, cam),
     gen_unit_status_view(bot_data, cam),
     gen_unit_selected_view(bot_data, cam),
-    gen_minimap_camera_view(map_size, cam)
+    # gen_minimap_camera_view(map_size, cam)
   ])
 
 
