@@ -78,6 +78,7 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
   agent = Agent(env, memory)
   measurer = Measurer(env_plan["env_map"], metrics_version)
 
+  loss = None
   graphics_cntr = 0
   frame_times, episode_timer, episode_time = [], time.time(), 0
   rewards = deque(maxlen=100)
@@ -90,12 +91,6 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
       if graphics is not None and graphics_cntr % 10 == 0:
         graphics.update(*info)
 
-      if len(memory) >= env_plan["min_memory_capacity"]:
-        if len(memory) == env_plan["min_memory_capacity"]:
-          logging.info("train: training started")
-
-        loss = train_cycle(net, target_net, memory, optimizer, "huber", env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
-      
       graphics_cntr += 1
 
       now = time.time()
@@ -103,6 +98,10 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
       frame_timer = now
 
     if len(memory) >= env_plan["min_memory_capacity"]:
+      if len(memory) == env_plan["min_memory_capacity"]:
+          logging.info("train: training started")
+
+      loss = train_cycle(100, net, target_net, memory, optimizer, "mse", env_plan["batch_size"], env_plan["steps"], env_plan["gamma"])
       epsilon = np.maximum(epsilon * env_plan["epsilon_decay"], env_plan["epsilon_min"])
 
     if episode % env_plan["merge_freq"] == 0:
@@ -120,13 +119,13 @@ def env_train_pipeline(base_plan, env_plan, net, memory, optimizer_state, metric
                  f"reward {round(reward, 3)}, "
                  f"mean reward {round(np.mean(rewards), 3)}, "
                  f"epsilon {round(epsilon, 3)}, "
-                 f"loss {round(loss, 3)}, "
+                 f"loss {round(loss, 3) if loss is not None else 0}, "
                  f"mean frame time {round(np.mean(frame_times), 3)}, "
                  f"episode time {round(episode_time, 3)}")
     measurer.add_value("reward", reward, episode)
     measurer.add_value("mean_reward", np.mean(rewards), episode)
     measurer.add_value("epsilon", epsilon, episode)
-    measurer.add_value("loss", loss, episode)
+    measurer.add_value("loss", loss if loss is not None else 0, episode)
     measurer.add_value("mean_frame_time", np.mean(frame_times), episode)
     measurer.add_value("episode_time", episode_time, episode)
 

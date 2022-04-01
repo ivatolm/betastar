@@ -67,12 +67,6 @@ class Graphics:
       )
       self.render_view(position, view)
 
-    if q is not None:
-      self.prev_q = q
-
-    if self.prev_q is not None:
-      self.render_status_bar(self.prev_q)
-
     pygame.display.update()
 
 
