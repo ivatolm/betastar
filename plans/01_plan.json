@@ -4,8 +4,8 @@
     "env_map_size": [48, 48],
     
     "channels_num": 3,
-    "dqn_input_shape": [3, 20, 20],
-    "dqn_output_shapes": [[5], [20], [20], [20], [20]],
+    "model_input_shape": [3, 20, 20],
+    "model_output_shapes": [[5], [20], [20], [20], [20]],
     "memory_capacity": 100000,
 
     "env_action_shape": [5],
@@ -14,16 +14,16 @@
     "env_done_shape": [1]
   },
   "env_0": {
-    "episodes_num": 1000,
     "env_map": "BuildMarines",
-    "learning_rate": 1,
+    "iterations": 100000,
+    "loss_func": "mse",
+    "epsilon_start": 0.9,
+    "epsilon_end": 0.1,
+    "epsilon_decay_length": 50000,
+    "learning_rate": 0.01,
     "merge_freq": 10,
-    "batch_size": 32,
-    "steps": 2,
-    "gamma": 0.99,
-    "min_memory_capacity": 1024,
-    "epsilon_max": 0.9,
-    "epsilon_min": 0.1,
-    "epsilon_decay": 0.97
+    "batch_size": 16,
+    "steps": 5,
+    "gamma": 0.99
   }
 }

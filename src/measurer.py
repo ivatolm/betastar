@@ -12,3 +12,6 @@ class Measurer:
   def add_value(self, metric_name, value, index):
     self.writer.add_scalar(self.label + '/' + metric_name, value, index)
 
+
+  def close(self):
+    self.writer.close()

@@ -5,7 +5,6 @@ import math
 
 from configs.graphics_cfg import *
 
-
 class Graphics:
   def __init__(self):
     pygame.init()
@@ -43,7 +42,7 @@ class Graphics:
     self.screen.blit(text, (0, self.views_size[1]))
 
 
-  def update(self, state, action, q):
+  def update(self, state):
     if self.screen is None:
       channels_num = state.shape[0]
       view_size = state[0].shape
@@ -51,10 +50,8 @@ class Graphics:
                      min(VIEWS_IN_ROW, channels_num))
       self.views_size = (self.layout[1] * (view_size[0] * CELL_SIZE) + (self.layout[1] - 1) * OFFSET_SIZE,
                          self.layout[0] * (view_size[1] * CELL_SIZE) + (self.layout[0] - 1) * OFFSET_SIZE)
-      self.statusbar_size = (self.views_size[0],
-                             STATUSBAR_HEIGHT)
-      self.display_size = (max(self.views_size[0], self.statusbar_size[0]),
-                           self.views_size[1] + self.statusbar_size[1])
+      self.display_size = (self.views_size[0],
+                           self.views_size[1])
       self.screen = pygame.display.set_mode(self.display_size)
 
     self.screen.fill(BACKGROUND_COLOR)

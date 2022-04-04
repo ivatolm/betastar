@@ -22,14 +22,22 @@ class Bot(BotAI):
     self.state_, self.reward_, self.done_ = None, 1, False
     self.prev_self = None
 
+    self.halt = False
+
 
   async def on_start(self):
     self.com = ComClient(*self.com_args)
 
 
   async def on_step(self, iteration):
+    if self.halt: return
+
     action = self.com.get()
     action = tuple(map(int, action))
+
+    if self.com.is_dead():
+      self.com.close()
+      exit()
 
     await self.do_action(action)
     state, reward, done = (self.generate_state(),
@@ -38,9 +46,15 @@ class Bot(BotAI):
 
     self.com.send(state, [reward], [done])
     self.prev_self = copy.copy(self)
+    
+    if self.com.is_dead():
+      self.com.close()
+      exit()
 
 
   async def on_end(self, result):
+    if self.halt: return
+
     self.done_ = True
     _ = self.com.get()
     state, reward, done = (self.generate_state(),
@@ -67,7 +81,7 @@ class Bot(BotAI):
       if unit.type_id == UnitTypeId.MARINE:
         reward += 100
     
-    return reward - prev_reward - 1
+    return reward - prev_reward
 
 
   def generate_done(self):
