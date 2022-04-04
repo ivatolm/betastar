@@ -6,9 +6,7 @@ import copy
 import logging
 
 from .env.env import Env
-from .env.bots.bot_01 import Bot
 from .measurer import Measurer
-from .graphics import Graphics
 
 from .agent import DDQNAgent
 from .lib.model import NdimDDQNModel
@@ -20,7 +18,7 @@ from configs.torch_cfg import *
 from configs.data_cfg import *
 
 
-def train_pipeline(plan, load_version=None, save_version=VERSION, graphics=None):
+def train_pipeline(plan, load_version=None, save_version=VERSION):
   base_plan = plan["BASE"]
   if load_version is not None:
     logging.info(f"train_pipeline: loading version {load_version}")
@@ -35,16 +33,12 @@ def train_pipeline(plan, load_version=None, save_version=VERSION, graphics=None)
 
   logging.info(model)
 
-  if graphics is not None:
-    graphics = Graphics()
-
   for plan_name, env_plan in plan.items():
     if plan_name == "BASE":
       continue
     logging.info(f"train_pipeline: training by '{plan_name}' plan")
     model, memory = env_train_pipeline(base_plan, env_plan, model, memory,
-                                       metrics_version=save_version,
-                                       graphics=graphics)
+                                       metrics_version=save_version)
 
   logging.info("train_pipeline: training finished")
 
@@ -57,23 +51,25 @@ def train_pipeline(plan, load_version=None, save_version=VERSION, graphics=None)
     pickle.dump(memory, file)
 
 
-def env_train_pipeline(base_plan, env_plan, model, memory, metrics_version, graphics=None):
+def env_train_pipeline(base_plan, env_plan, model, memory, metrics_version):
   loss = NStepNdimLoss(env_plan["loss_func"])
   policy = NdimEpsilonGreedyPolicy(env_plan["epsilon_start"], env_plan["epsilon_end"], env_plan["epsilon_decay_length"])
   optimizer = optim.Adam(model.parameters(), lr=env_plan["learning_rate"])
-  env = Env(base_plan, env_plan, (Bot, (base_plan["env_view_size"], base_plan["env_map_size"])), graphics=graphics)
-
-  agent = DDQNAgent(model, memory, loss, policy, optimizer, env, {"merge_freq": env_plan["merge_freq"],
-                                                                  "batch_size": env_plan["batch_size"],
-                                                                  "steps": env_plan["steps"],
-                                                                  "gamma": env_plan["gamma"]})
+  agent = DDQNAgent(model, memory, loss, policy, optimizer, {"merge_freq": env_plan["merge_freq"],
+                                                             "batch_size": env_plan["batch_size"],
+                                                             "steps": env_plan["steps"],
+                                                             "gamma": env_plan["gamma"]})
 
   measurer = Measurer(env_plan["env_map"], metrics_version)
+  env = Env(base_plan, env_plan, (base_plan["env_view_size"], base_plan["env_map_size"]))
 
+  agent.set_env(env)
   for i in range(env_plan["iterations"]):
     agent.iter()
 
-    if agent.has_unseen_stats():
+    if agent.is_env_done():
+      agent.remove_env()
+      agent.set_env(env)
       stats = agent.get_stats()
       logging.info(f"train: "
                   f"iteration: {stats['iteration']}, "
@@ -87,9 +83,9 @@ def env_train_pipeline(base_plan, env_plan, model, memory, metrics_version, grap
       measurer.add_value("mean_qs", stats["mean_qs"], stats["iteration"])
       measurer.add_value("mean_frame_time", stats["mean_frame_time"], stats["iteration"])
       measurer.add_value("epsilon", stats["epsilon"], stats["iteration"])
+  agent.remove_env()
 
   measurer.close()
-  env.stop()
 
   return tuple([copy.deepcopy(agent.get_model()),
                 copy.deepcopy(agent.get_memory())])

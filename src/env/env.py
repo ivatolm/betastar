@@ -1,6 +1,6 @@
 from sc2 import maps
 from sc2.player import Bot, Computer
-from sc2.main import GameMatch, run_game
+from sc2.main import run_game
 from sc2.data import Race, Difficulty
 import warnings
 warnings.filterwarnings('ignore')
@@ -8,7 +8,9 @@ warnings.filterwarnings('ignore')
 from multiprocessing import Process, shared_memory, Condition, Value
 import numpy as np
 
+from .bot import Bot as AIBot
 from .com import ComServer
+from .graphics import Graphics
 
 
 class Env:
@@ -16,7 +18,7 @@ class Env:
     self.base_plan = base_plan
     self.env_plan = env_plan
     self.bot_data = bot_data
-    self.graphics = graphics
+    self.graphics = Graphics()
 
     self.cv_server = Condition()
     self.cv_client = Condition()
@@ -38,7 +40,7 @@ class Env:
     self.game = None
 
 
-  def stop(self) -> None:
+  def __del__(self) -> None:
     if self.game is not None:
       self.com.notify()
       self.game.join()
@@ -55,7 +57,7 @@ class Env:
   def reset(self) -> np.array:
     def _game_process(self):
       run_game(maps.get(self.env_plan["env_map"]), [
-        Bot(Race.Terran, self.bot_data[0](self.bot_data[1], self.com_args)),
+        Bot(Race.Terran, AIBot(self.bot_data, self.com_args)),
         Computer(Race.Protoss, Difficulty.Medium)
       ], realtime=False)
 
@@ -73,6 +75,5 @@ class Env:
   def step(self, action: tuple[int]) -> np.array:
     self.com.send(action)
     self.state, self.reward, self.done = self.com.get()
-    if self.graphics is not None:
-      self.graphics.update(self.state)
+    self.graphics.update(self.state)
     return self.state, self.reward[0], self.done[0], ""

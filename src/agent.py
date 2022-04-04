@@ -8,14 +8,13 @@ from configs.torch_cfg import DEVICE
 
 
 class DDQNAgent:
-  def __init__(self, model: Model_t, memory: Memory_t, loss: Loss_t, policy: Policy_t, optimizer: optim, env: Env_t, conf: dict) -> None:
+  def __init__(self, model: Model_t, memory: Memory_t, loss: Loss_t, policy: Policy_t, optimizer: optim, conf: dict) -> None:
     self.model        = model.to(DEVICE)
     self.target_model = copy.deepcopy(self.model).to(DEVICE)
     self.memory       = memory
     self.loss         = loss
     self.policy       = policy
     self.optimizer    = optimizer
-    self.env          = env
     self.conf         = conf
     self.iter_cntr    = 0
 
@@ -29,9 +28,9 @@ class DDQNAgent:
                           "mean_qs": 0,
                           "mean_frame_time": 0,
                           "epsilon": 0}
-    self.stats_unseen    = False
 
-    self.state = self.env.reset()
+    self.env                   = None
+    self.is_env_done_flag      = True
 
 
   def iter(self) -> None:
@@ -43,18 +42,17 @@ class DDQNAgent:
     self.memory.push(self.state, action, reward, done, next_state)
     self.state = next_state
     if done:
-      self.state = self.env.reset()
-      self.stats["iteration"] = self.iter_cntr
-      self.stats["total_reward"] = sum(self.episode_stats["rewards"])
-      self.stats["mean_loss"] = np.mean(self.episode_stats["losses"])
-      self.stats["mean_qs"] = np.mean(self.episode_stats["qs"])
+      self.stats["iteration"]       = self.iter_cntr
+      self.stats["total_reward"]    = sum(self.episode_stats["rewards"])
+      self.stats["mean_loss"]       = np.mean(self.episode_stats["losses"])
+      self.stats["mean_qs"]         = np.mean(self.episode_stats["qs"])
       self.stats["mean_frame_time"] = np.mean(self.episode_stats["frame_times"])
-      self.stats["epsilon"] = self.policy.get_epsilon()
-      self.episode_stats = {"rewards": [],
-                            "losses": [],
-                            "qs": [],
-                            "frame_times": []}
-      self.stats_unseen = True
+      self.stats["epsilon"]         = self.policy.get_epsilon()
+      self.episode_stats            = {"rewards": [],
+                                       "losses": [],
+                                       "qs": [],
+                                       "frame_times": []}
+      self.is_env_done_flag         = True
 
     self.policy.update()
 
@@ -80,12 +78,22 @@ class DDQNAgent:
     self.iter_cntr += 1
 
 
-  def has_unseen_stats(self) -> bool:
-    return self.stats_unseen
+  def set_env(self, env) -> None:
+    self.env              = env
+    self.is_env_done_flag = False
+    self.state            = self.env.reset()
+
+
+  def remove_env(self) -> None:
+    self.env   = None
+    self.state = None
+
+
+  def is_env_done(self) -> bool:
+    return self.is_env_done_flag
 
 
   def get_stats(self) -> dict:
-    self.stats_unseen = False
     return self.stats
 
 

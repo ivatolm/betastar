@@ -15,13 +15,11 @@ def run():
   parser.add_argument("--plan", dest="plan", help="Train model by this plan")
   parser.add_argument("--load_version", dest="load_version", help="Load model from this version")
   parser.add_argument("--save_version", dest="save_version", help="Save model to this version")
-  parser.add_argument("--graphics", dest="graphics", help="Visualize environment")
   args = parser.parse_args()
 
   plan = args.plan
   load_version = args.load_version
   save_version = args.save_version
-  graphics = args.graphics
 
   if plan is not None:
     load_status = False
@@ -60,6 +58,4 @@ def run():
     pipeline_args["load_version"] = load_version
   if save_version is not None:
     pipeline_args["save_version"] = save_version
-  if graphics is not None:
-    pipeline_args["graphics"] = graphics
   train_pipeline(plan, **pipeline_args)

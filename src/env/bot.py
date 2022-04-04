@@ -4,7 +4,7 @@ from sc2.position import Point2
 
 from .state_tools import get_uid, to_screen_pos, to_int_pos, to_abs_pos
 
-from ..com import ComClient
+from .com import ComClient
 from .state_pipeline import pipeline as gen_state
 
 import copy
